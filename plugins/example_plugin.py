@@ -16,6 +16,7 @@ __plugin_name__ = "Example Plugin"
 __plugin_uuid__ = "00000000-0000-0000-0000-000000000000"
 __plugin_version__ = "0.1.0"
 __plugin_author__ = "Max Loiacono"
+__plugin_website__ = "https://github.com/photoserv/python-plugins/blob/main/plugins/example_plugin.md"
 
 # Example configuration schema - describes what config this plugin expects
 # Users will provide actual values as JSON in the admin interface, for example:
