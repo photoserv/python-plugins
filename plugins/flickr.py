@@ -4,7 +4,7 @@ Flickr plugin for Photoserv enabling photo publishing to Flickr.
 This plugin handles:
 - Publishing photos to Flickr with metadata and tags
 - Managing photo limits and tracking uploaded photos
-- Automatic group set assignment based on tags and albums
+- Automatic group set assignment based on tags and albums with glob pattern support
 - Photo unpublishing and cleanup
 """
 
@@ -19,13 +19,14 @@ import uuid
 import base64
 import xml.etree.ElementTree as ET
 from io import BytesIO
+from fnmatch import fnmatch
 
 from photoserv_plugin import PhotoservPlugin
 
 # Required module-level variables
 __plugin_name__ = "Flickr"
 __plugin_uuid__ = "dd5efb7c-4f55-4203-b261-468ccecc0f46"
-__plugin_version__ = "0.1.0"
+__plugin_version__ = "0.2.0"
 __plugin_author__ = "Max Loiacono"
 __plugin_website__ = "https://github.com/photoserv/python-plugins/blob/main/plugins/flickr.md"
 
@@ -40,7 +41,7 @@ __plugin_config__ = {
     "flickr_photo_limit_initial_count": "(int) Number of photos already in Flickr before installing this plugin (default: 0)",
     "upload_size": "(string) Size of photo to upload to Flickr (default: 'original')",
     "photo_description_footer": "Optional footer text to append to photo descriptions",
-    "group_sets": "Array of group set configurations with name, groups, auto_tags, and auto_albums",
+    "group_sets": "Array of group set configurations with name, groups, auto_tags (glob patterns), and auto_albums (glob patterns)",
 }
 
 # Entity parameter schema
@@ -330,7 +331,7 @@ class FlickrPlugin(PhotoservPlugin):
         return tags
 
     def _get_applicable_group_sets(self, data, params):
-        """Determine which group sets apply to this photo."""
+        """Determine which group sets apply to this photo based on OR-matching with glob pattern support."""
         applicable_sets = []
         
         # Get photo tags and albums
@@ -343,21 +344,32 @@ class FlickrPlugin(PhotoservPlugin):
             if not name:
                 continue
             
-            # Check auto_tags - photo must have ALL specified tags
+            # Check auto_tags - photo matches if ANY tag matches ANY pattern (OR-based with glob support)
             auto_tags = group_set.get('auto_tags', [])
             if auto_tags:
-                if all(tag in photo_tag_names for tag in auto_tags):
+                matched = False
+                for pattern in auto_tags:
+                    # Check if any photo tag matches this pattern
+                    if any(fnmatch(tag, pattern) for tag in photo_tag_names):
+                        matched = True
+                        self.logger.info(f"  Auto-matched group set '{name}' via tag pattern '{pattern}'")
+                        break
+                if matched:
                     applicable_sets.append(group_set)
-                    self.logger.info(f"  Auto-matched group set '{name}' via tags")
                     continue
             
-            # Check auto_albums - photo must be in at least one specified album
+            # Check auto_albums - photo matches if ANY album matches ANY pattern (OR-based with glob support)
             auto_albums = group_set.get('auto_albums', [])
             if auto_albums:
-                if any(album in photo_album_uuids or album in photo_album_slugs 
-                       for album in auto_albums):
+                matched = False
+                for pattern in auto_albums:
+                    # Check if any album UUID or slug matches this pattern
+                    if any(fnmatch(album, pattern) for album in photo_album_uuids | photo_album_slugs):
+                        matched = True
+                        self.logger.info(f"  Auto-matched group set '{name}' via album pattern '{pattern}'")
+                        break
+                if matched:
                     applicable_sets.append(group_set)
-                    self.logger.info(f"  Auto-matched group set '{name}' via albums")
                     continue
         
         # Add additional group sets from entity parameters

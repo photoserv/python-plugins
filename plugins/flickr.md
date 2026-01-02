@@ -12,7 +12,8 @@ The Flickr plugin enables automatic photo publishing and management on Flickr. I
 - **Photo Unpublishing**: Remove photos from Flickr when unpublished in Photoserv
 - **Metadata Sync**: Sync photo titles, descriptions, and tags
 - **Tag Management**: Automatically process and format tags for Flickr compatibility
-- **Group Management**: Automatically add photos to Flickr groups based on rules
+- **Smart Group Management**: Automatically add photos to Flickr groups using flexible OR-based matching with glob pattern support (`*` wildcards)
+- **Pattern Matching**: Match tags and albums with patterns like `wildlife*`, `vacation-*`, or `*` for all
 - **Photo Limits**: Configure maximum number of published photos
 - **Per-Photo Customization**: Override descriptions and tags on a per-photo basis
 
@@ -62,12 +63,19 @@ The plugin requires the following configuration (provided as JSON in the Photose
 
 #### Group Sets
 
-Group sets define rules for automatically adding photos to Flickr groups:
+Group sets define rules for automatically adding photos to Flickr groups using **OR-based matching** with **glob pattern support**:
 
 - **name**: Identifier for the group set
 - **groups**: Array of Flickr group IDs where photos should be added
-- **auto_tags**: Photos with ALL of these tags will be added to the groups
-- **auto_albums**: Photos in albums with these UUIDs or slugs will be added to the groups
+- **auto_tags**: Glob patterns for tag matching. A photo is matched if **ANY** of its tags matches **ANY** pattern (OR-based). Supports wildcards like `*` (e.g., `wildlife*` matches `wildlife`, `wildlife-bird`, etc.)
+- **auto_albums**: Glob patterns for album matching. A photo is matched if it belongs to **ANY** album whose UUID or slug matches **ANY** pattern (OR-based). Supports wildcards like `*` (e.g., `vacation-*` matches `vacation-2024`, `vacation-2025`, etc.)
+
+**Pattern Examples:**
+- `*` - Matches everything (all photos)
+- `wildlife` - Exact match only
+- `wildlife*` - Matches tags/albums starting with "wildlife"
+- `*landscape*` - Matches tags/albums containing "landscape"
+- `photo-202?` - Matches tags/albums like "photo-2024", "photo-2025" (? matches single character)
 
 ### Entity Parameters
 
@@ -384,7 +392,7 @@ Configuration:
 
 Result: Photos are uploaded to Flickr at 'large' size with their title, description, and tags. No automatic group assignment. The plugin starts tracking from a baseline of 58 existing photos.
 
-### Scenario 2: Automatic Group Assignment
+### Scenario 2: Automatic Group Assignment with Glob Patterns
 
 Configuration:
 ```json
@@ -398,13 +406,21 @@ Configuration:
     {
       "name": "Wildlife",
       "groups": ["11111111@N01", "22222222@N01"],
-      "auto_tags": ["wildlife", "animals"]
+      "auto_tags": ["wildlife*", "animal*"]
+    },
+    {
+      "name": "All Vacations",
+      "groups": ["33333333@N01"],
+      "auto_albums": ["vacation-*"]
     }
   ]
 }
 ```
 
-Result: Photos tagged with both "wildlife" AND "animals" are automatically added to the specified groups.
+Result: 
+- Photos with tags matching `wildlife*` OR `animal*` (e.g., "wildlife", "wildlife-bird", "animals", "animal-cat") are added to the Wildlife group set
+- Photos in albums matching `vacation-*` (e.g., "vacation-2024", "vacation-2025", "vacation-europe") are added to the All Vacations group set
+- Matching is OR-based, so only ONE pattern needs to match
 
 ### Scenario 3: Per-Photo Customization
 
@@ -420,7 +436,29 @@ Entity parameters for a specific photo:
 
 Result: This photo uses a custom description, gets extra tags, is added to the Wildlife group set, and is marked as Safe content.
 
-### Scenario 4: Force Re-upload
+### Scenario 4: Match All Photos with Wildcard
+
+Configuration:
+```json
+{
+  "flickr_api_key": "abc123",
+  "flickr_api_secret": "xyz789",
+  "flickr_oauth_token": "72157123456789-abcdef1234567890",
+  "flickr_oauth_token_secret": "fedcba0987654321",
+  "flickr_user_id": "12345678@N01",
+  "group_sets": [
+    {
+      "name": "All Photos Group",
+      "groups": ["44444444@N01"],
+      "auto_tags": ["*"]
+    }
+  ]
+}
+```
+
+Result: ALL photos are automatically added to the "All Photos Group" because the `*` wildcard matches any tag. This is useful for adding all your photos to a general portfolio group.
+
+### Scenario 5: Force Re-upload
 
 Entity parameters to force re-upload an existing photo:
 ```json
@@ -452,9 +490,10 @@ Result: The photo will be re-uploaded to Flickr even if it was already uploaded,
 ### Groups Not Being Assigned
 
 - Verify group IDs are correct (should be in N format)
-- Check that auto_tags match exactly (case-sensitive)
-- Confirm auto_albums use the correct UUID or slug
-- Review logs for group assignment errors
+- Check that auto_tags and auto_albums patterns are correct (supports glob patterns with *)
+- Remember: Matching is OR-based - only ONE pattern needs to match
+- Patterns are case-sensitive
+- Review logs for group assignment errors and which patterns matched
 
 ### Duplicate Photos
 
@@ -478,10 +517,18 @@ This plugin demonstrates:
 - HTTP API interaction using urllib
 - JSON configuration parsing
 - Persistent state management
-- Conditional logic for auto-tagging and group assignment
+- Glob pattern matching for flexible tag and album filtering
+- OR-based conditional logic for auto-tagging and group assignment
 - Error handling and logging best practices
 
 ## Changelog
+
+- **0.2.0** (2026-01-02): Pattern matching update
+  - **BREAKING CHANGE**: Group set matching changed from AND-based to OR-based
+  - Added glob pattern support for `auto_tags` and `auto_albums` (supports `*` wildcard)
+  - A photo now matches if ANY tag/album matches ANY pattern (more flexible)
+  - Improved logging to show which specific patterns matched
+  - Example: `"auto_tags": ["wildlife*"]` now matches "wildlife", "wildlife-bird", "wildlifephotography", etc.
 
 - **0.1.0** (2025-12-30): Initial release
   - Photo upload and deletion
