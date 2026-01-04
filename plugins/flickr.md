@@ -13,8 +13,7 @@ The Flickr plugin enables automatic photo publishing and management on Flickr. I
 - **Metadata Sync**: Sync photo titles, descriptions, and tags
 - **Tag Management**: Automatically process and format tags for Flickr compatibility
 - **Smart Group Management**: Automatically add photos to Flickr groups using flexible OR-based matching with glob pattern support (`*` wildcards)
-- **Pattern Matching**: Match tags and albums with patterns like `wildlife*`, `vacation-*`, or `*` for all
-- **Photo Limits**: Configure maximum number of published photos
+- **Photo Limits**: Configure maximum number of published photos for free/pro accounts
 - **Per-Photo Customization**: Override descriptions and tags on a per-photo basis
 
 ## Configuration
@@ -285,26 +284,6 @@ if __name__ == "__main__":
 
 3. Follow the prompts to authorize and obtain your tokens
 
-#### Alternative Methods
-
-If you prefer not to use the Python script above:
-
-**Option A: Use Postman or Insomnia**
-1. Set up OAuth 1.0a authentication in the tool
-2. Configure:
-   - Consumer Key: Your API Key
-   - Consumer Secret: Your API Secret
-   - Request Token URL: `https://www.flickr.com/services/oauth/request_token`
-   - Authorization URL: `https://www.flickr.com/services/oauth/authorize?perms=delete`
-   - Access Token URL: `https://www.flickr.com/services/oauth/access_token`
-3. Complete the OAuth flow to get your access token and token secret
-
-**Option B: Use Flickr's API Explorer**
-1. Go to [Flickr API Explorer](https://www.flickr.com/services/api/explore/flickr.test.login)
-2. Sign in with your Flickr account
-3. Call the test.login method
-4. Look at the signed request to extract your oauth_token and oauth_token_secret
-
 ### Step 3: Get Your User ID
 
 Your User ID (NSID) will be shown in the script output above. Alternatively:
@@ -337,40 +316,12 @@ When a photo is unpublished in Photoserv:
 3. Removes the tracking data from persistent storage
 4. Decrements the published photo count
 
-### Tag Processing
-
-The plugin automatically:
-- Removes spaces from tags (Flickr requirement)
-- Combines tags from photo data and entity parameters
-- Filters out empty tags
-
 ### Group Assignment
 
 Photos are automatically added to groups when:
-- The photo has ALL tags specified in a group set's `auto_tags`
+- The photo has any tag specified in a group set's `auto_tags`
 - The photo belongs to an album specified in a group set's `auto_albums` (by UUID or slug)
 - The photo's entity parameters include the group set name in `additional_group_sets`
-
-## Persistent Storage
-
-The plugin tracks state using Photoserv's persistent configuration:
-
-- `published_photo_count`: Total number of photos currently published to Flickr
-- `{photo_uuid}_uploaded`: Flickr photo ID for each uploaded photo
-
-## Error Handling
-
-The plugin includes comprehensive error handling:
-
-- Validation of required configuration parameters
-- API error handling with detailed logging
-- Network error handling with timeouts
-- Graceful degradation for group assignment failures
-- Proper cleanup on unpublish failures
-
-## Limitations
-
-- **OAuth Tokens Required**: You must obtain OAuth access tokens through an external OAuth flow before using this plugin. The plugin does not implement the interactive OAuth authorization flow.
 
 ## Example Scenarios
 
@@ -467,59 +418,17 @@ Entity parameters to force re-upload an existing photo:
 }
 ```
 
-Result: The photo will be re-uploaded to Flickr even if it was already uploaded, generating a new Flickr photo ID. The published photo count is not incremented since it's a replacement.
+Result: The photo will be re-uploaded to Flickr even if it was already uploaded, generating a new Flickr photo ID. The published photo count is not incremented since it's a replacement. Use this if the integration
+gets screwey.
 
 ## Troubleshooting
 
-### Authentication Errors
-
-**Error**: `oauth_problem=parameter_absent&oauth_parameters_absent=oauth_token`
-- **Cause**: Missing OAuth access tokens in configuration
-- **Solution**: Complete the OAuth flow to obtain your `oauth_token` and `oauth_token_secret`. You need all four credential fields: `flickr_api_key`, `flickr_api_secret`, `oauth_token`, and `oauth_token_secret`.
-
-**Question**: Do I need to re-authenticate periodically?
-- **Answer**: No! Flickr OAuth tokens do not expire. Once obtained, they work indefinitely unless you revoke access from your Flickr account settings.
-
-### Photo Not Uploading
-
 - Verify Flickr API credentials are correct
 - Check the published photo limit hasn't been reached
-- Ensure the photo image can be retrieved
+- Ensure the configured upload size is valid
 - Review logs for API error messages
 
-### Groups Not Being Assigned
-
-- Verify group IDs are correct (should be in N format)
-- Check that auto_tags and auto_albums patterns are correct (supports glob patterns with *)
-- Remember: Matching is OR-based - only ONE pattern needs to match
-- Patterns are case-sensitive
-- Review logs for group assignment errors and which patterns matched
-
-### Duplicate Photos
-
-The plugin prevents duplicates by tracking uploaded photos. If you see duplicates:
-- Check the persistent storage integrity
-- Verify the `{photo_uuid}_uploaded` keys are being set correctly
-- Review logs for upload confirmation messages
-
-**Note**: If you intentionally want to re-upload a photo, use the `force: true` entity parameter.
-
-### Force Re-upload Not Working
-
-- Ensure the entity parameter is set as a boolean: `"force": true` (not a string)
-- Check logs to confirm the force parameter is being recognized
-- Verify you have not reached the `flickr_photo_limit` limit
-
-## Development Notes
-
-This plugin demonstrates:
-- OAuth 1.0a signature generation without external libraries
-- HTTP API interaction using urllib
-- JSON configuration parsing
-- Persistent state management
-- Glob pattern matching for flexible tag and album filtering
-- OR-based conditional logic for auto-tagging and group assignment
-- Error handling and logging best practices
+If it seems like a bug, create an issue with as much data as possible.
 
 ## Changelog
 
