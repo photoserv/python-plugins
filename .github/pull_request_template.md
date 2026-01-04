@@ -1,12 +1,14 @@
 ## Plugin Submission
 
 ### Description
+
 <!-- Briefly describe what your plugin does and its purpose -->
 
 ### Plugin Details
-- **Plugin Name**: 
-- **Plugin UUID**: 
-- **Plugin Version**: 
+
+* **Plugin Name**: 
+* **Plugin UUID**: 
+* **Plugin Version**: 
 
 ### Checklist
 
