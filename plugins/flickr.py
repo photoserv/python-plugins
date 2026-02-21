@@ -26,7 +26,7 @@ from photoserv_plugin import PhotoservPlugin
 # Required module-level variables
 __plugin_name__ = "Flickr"
 __plugin_uuid__ = "dd5efb7c-4f55-4203-b261-468ccecc0f46"
-__plugin_version__ = "0.2.0"
+__plugin_version__ = "0.3.0"
 __plugin_author__ = "Max Loiacono"
 __plugin_website__ = "https://github.com/photoserv/python-plugins/blob/main/plugins/flickr.md"
 
@@ -403,6 +403,19 @@ class FlickrPlugin(PhotoservPlugin):
                 except Exception as e:
                     self.logger.error(f"  Failed to add photo to group {group_id}: {e}")
                     # Continue with other groups even if one fails
+    
+    def _geotag_photo(self, flickr_photo_id, latitude, longitude):
+        """Add geotag to photo on Flickr."""
+        try:
+            self.logger.info(f"  Adding geotag to photo (ID: {flickr_photo_id}): lat={latitude}, lon={longitude}")
+            self._flickr_api_call('flickr.photos.geo.setLocation', {
+                'photo_id': flickr_photo_id,
+                'lat': str(latitude),
+                'lon': str(longitude)
+            })
+        except Exception as e:
+            self.logger.error(f"  Failed to add geotag to photo: {e}")
+            # Geotagging is optional, so we won't raise an exception here
 
     def on_photo_publish(self, data, params, **kwargs):
         """Handle photo publish events."""
@@ -507,6 +520,14 @@ class FlickrPlugin(PhotoservPlugin):
                 self._add_photo_to_groups(flickr_photo_id, group_sets)
             else:
                 self.logger.info("  No group sets applicable for this photo")
+            
+            # Geotag photo if location data is available
+            location = data.get('location')
+            if location:
+                latitude = location.get('latitude')
+                longitude = location.get('longitude')
+                if latitude is not None and longitude is not None:
+                    self._geotag_photo(flickr_photo_id, latitude, longitude)
             
             self.logger.info(f"  Publish complete (total published: {new_count}/{self.flickr_photo_limit})")
             

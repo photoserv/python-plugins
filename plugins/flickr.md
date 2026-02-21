@@ -432,6 +432,9 @@ If it seems like a bug, create an issue with as much data as possible.
 
 ## Changelog
 
+- **0.3.0** (2026-02-21): Parity with Photoserv 0.9.0
+  - Geotag photos
+
 - **0.2.0** (2026-01-02): Pattern matching update
   - **BREAKING CHANGE**: Group set matching changed from AND-based to OR-based
   - Added glob pattern support for `auto_tags` and `auto_albums` (supports `*` wildcard)
