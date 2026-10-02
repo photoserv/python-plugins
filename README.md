@@ -1,4 +1,4 @@
-# python-plugins
+# DEPRECATED: MOVED TO [itsmaxymoo](https://github.com/itsmaxymoo/photoserv-plugins)
 
 Python plugins for Photoserv
 
